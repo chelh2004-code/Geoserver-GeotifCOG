@@ -178,5 +178,5 @@ Les données sont fournies à titre éducatif et de démonstration.
 
 ---
 
-Dernière mise à jour : Mars 2025  
+Dernière mise à jour : Décembre 2025  
 Projet réalisé dans le cadre du module Web Mapping - IAV Hassan II
