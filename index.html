@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Visualisation Multi-Couches - Données Exportées</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        #container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        #header {
+            background: linear-gradient(135deg, #004080, #0066cc);
+            color: white;
+            padding: 25px;
+            text-align: center;
+        }
+        #header h1 {
+            margin: 0;
+            font-size: 28px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        #header p {
+            margin: 10px 0 0 0;
+            opacity: 0.9;
+            font-size: 16px;
+        }
+        #map {
+            height: 600px;
+            width: 100%;
+        }
+        #controls {
+            padding: 20px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #ddd;
+        }
+        .control-panel {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        .layer-controls {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            border: 2px solid #004080;
+            min-width: 200px;
+        }
+        .layer-controls h3 {
+            margin: 0 0 15px 0;
+            color: #004080;
+            text-align: center;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 8px;
+        }
+        .layer-option {
+            display: flex;
+            align-items: center;
+            margin: 10px 0;
+            padding: 5px;
+            border-radius: 5px;
+            transition: background 0.3s;
+        }
+        .layer-option:hover {
+            background: #f0f8ff;
+        }
+        .layer-option input {
+            margin-right: 10px;
+            transform: scale(1.2);
+        }
+        .layer-option label {
+            cursor: pointer;
+            font-weight: bold;
+            flex-grow: 1;
+        }
+        .opacity-control {
+            display: flex;
+            align-items: center;
+            margin-left: 10px;
+        }
+        .opacity-control input {
+            width: 60px;
+            margin: 0 5px;
+        }
+        button {
+            background: #004080;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            margin: 5px;
+        }
+        button:hover {
+            background: #0066cc;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+        #status {
+            padding: 12px 20px;
+            margin: 10px 0;
+            border-radius: 25px;
+            font-weight: bold;
+            text-align: center;
+            flex-grow: 1;
+        }
+        .success { 
+            background: #d4edda; 
+            color: #155724; 
+            border: 2px solid #c3e6cb;
+        }
+        .error { 
+            background: #f8d7da; 
+            color: #721c24; 
+            border: 2px solid #f5c6cb;
+        }
+        .loading { 
+            background: #fff3cd; 
+            color: #856404; 
+            border: 2px solid #ffeaa7;
+        }
+        .legend {
+            position: absolute;
+            bottom: 25px;
+            left: 25px;
+            z-index: 1000;
+            background: white;
+            padding: 15px;
+            border: 2px solid #004080;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            max-width: 200px;
+        }
+        .legend h4 {
+            margin: 0 0 10px 0;
+            color: #004080;
+            text-align: center;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 5px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin: 5px 0;
+        }
+        .color-box {
+            width: 20px;
+            height: 20px;
+            margin-right: 10px;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+        }
+        .coordinates {
+            position: absolute;
+            bottom: 25px;
+            right: 25px;
+            z-index: 1000;
+            background: white;
+            padding: 10px 15px;
+            border: 2px solid #004080;
+            border-radius: 10px;
+            font-family: monospace;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        .description {
+            padding: 20px;
+            background: #f8f9fa;
+            border-top: 1px solid #ddd;
+            line-height: 1.6;
+        }
+        .description h3 {
+            color: #004080;
+            margin-top: 0;
+        }
+        .map-frame {
+            border: 3px solid #004080;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 0 20px 20px 20px;
+        }
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            justify-content: center;
+        }
+        .export-info {
+            background: #e8f5e8;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            border-left: 4px solid #28a745;
+        }
+    </style>
+</head>
+<body>
+
+<div id="container">
+    <div id="header">
+        <h1>🌍 Visualisation Multi-Couches</h1>
+        <p>Explorez les données NDVI, RGB et NDWI</p>
+    </div>
+
+    <div class="export-info">
+        <strong>📁 Données utilisées :</strong> Images exportées depuis GeoServer
+    </div>
+
+    <div id="controls">
+        <div class="control-panel">
+            <div class="layer-controls">
+                <h3>📊 Couches Disponibles</h3>
+                <div class="layer-option">
+                    <input type="checkbox" id="ndviCheck" checked onchange="toggleLayer('ndvi')">
+                    <label for="ndviCheck" style="color: #00FF00;">🌱 NDVI</label>
+                    <div class="opacity-control">
+                        <input type="range" min="0" max="1" step="0.1" value="0.8" 
+                               onchange="updateLayerOpacity('ndvi', this.value)">
+                        <span id="ndviOpacity">80%</span>
+                    </div>
+                </div>
+                <div class="layer-option">
+                    <input type="checkbox" id="rgbCheck" onchange="toggleLayer('rgb')">
+                    <label for="rgbCheck" style="color: #FF0000;">🖼️ RGB</label>
+                    <div class="opacity-control">
+                        <input type="range" min="0" max="1" step="0.1" value="0.8" 
+                               onchange="updateLayerOpacity('rgb', this.value)">
+                        <span id="rgbOpacity">80%</span>
+                    </div>
+                </div>
+                <div class="layer-option">
+                    <input type="checkbox" id="ndwiCheck" onchange="toggleLayer('ndwi')">
+                    <label for="ndwiCheck" style="color: #0000FF;">💧 NDWI</label>
+                    <div class="opacity-control">
+                        <input type="range" min="0" max="1" step="0.1" value="0.8" 
+                               onchange="updateLayerOpacity('ndwi', this.value)">
+                        <span id="ndwiOpacity">80%</span>
+                    </div>
+                </div>
+                
+                <div class="action-buttons">
+                    <button onclick="showAllLayers()">Afficher Tout</button>
+                    <button onclick="hideAllLayers()">Masquer Tout</button>
+                </div>
+            </div>
+
+            <div id="status" class="loading">
+                🚀 Chargement des images...
+            </div>
+        </div>
+    </div>
+
+    <div class="map-frame">
+        <div id="map"></div>
+    </div>
+    
+    <div class="legend">
+        <h4>🎨 Légende Active</h4>
+        <div id="ndviLegend">
+            <div class="legend-item">
+                <div class="color-box" style="background: #0000FF"></div>
+                <span>-1 : Très faible</span>
+            </div>
+            <div class="legend-item">
+                <div class="color-box" style="background: #FFFFFF"></div>
+                <span>0 : Sol nu</span>
+            </div>
+            <div class="legend-item">
+                <div class="color-box" style="background: #FFFF00"></div>
+                <span>0.2 : Faible vég.</span>
+            </div>
+            <div class="legend-item">
+                <div class="color-box" style="background: #00FF00"></div>
+                <span>0.5 : Vég. moyenne</span>
+            </div>
+            <div class="legend-item">
+                <div class="color-box" style="background: #006400"></div>
+                <span>1 : Vég. dense</span>
+            </div>
+        </div>
+        <div id="ndwiLegend" style="display: none;">
+            <div class="legend-item">
+                <div class="color-box" style="background: #0000FF"></div>
+                <span>-1 : Eau faible</span>
+            </div>
+            <div class="legend-item">
+                <div class="color-box" style="background: #00FFFF"></div>
+                <span>0 : Sol humide</span>
+            </div>
+            <div class="legend-item">
+                <div class="color-box" style="background: #008000"></div>
+                <span>0.5 : Eau modérée</span>
+            </div>
+        </div>
+    </div>
+    
+    <div class="coordinates" id="coordinates">
+        Lat: --.--, Lng: --.--
+    </div>
+
+    <div class="description">
+        <h3>📋 Description de l'Application</h3>
+        <p>Cette application affiche les données exportées depuis GeoServer sous forme d'images géoréférencées.</p>
+        
+        <p><strong>🌱 NDVI</strong> : Indice de végétation normalisé montrant la santé de la végétation</p>
+        <p><strong>🖼️ RGB</strong> : Composition colorée naturelle pour la visualisation des caractéristiques du terrain</p>
+        <p><strong>💧 NDWI</strong> : Indice d'eau normalisé détectant les plans d'eau et l'humidité</p>
+        
+        <p><strong>📍 Source</strong> : Données originales servies par GeoServer et exportées pour hébergement statique</p>
+        
+        <p><strong>🎯 Fonctionnalités</strong> : Navigation interactive, contrôle individuel des couches, ajustement d'opacité, légende dynamique et informations de position</p>
+    </div>
+</div>
+
+<script>
+// ===== CONFIGURATION =====
+const CONFIG = {
+    mapCenter: [45.495985, 12.319279],
+    mapZoom: 12,
+    // Coordonnées exactes de votre zone d'étude en Italie
+    imageBounds: [
+        [45.48, 12.30],  // Sud-ouest
+        [45.51, 12.34]   // Nord-est
+    ]
+};
+
+// ===== VARIABLES GLOBALES =====
+let map;
+let layers = {
+    ndvi: null,
+    rgb: null,
+    ndwi: null
+};
+let layerVisibility = {
+    ndvi: true,
+    rgb: false,
+    ndwi: false
+};
+
+// ===== INITIALISATION =====
+function initMap() {
+    updateStatus('🗺️ Création de la carte...', 'loading');
+    
+    // Créer la carte Leaflet
+    map = L.map('map').setView(CONFIG.mapCenter, CONFIG.mapZoom);
+    
+    // Ajouter le fond de carte
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors | Données: GeoServer Export',
+        maxZoom: 19
+    }).addTo(map);
+    
+    // Charger les images exportées
+    loadExportedImages();
+    
+    // Configurer les événements
+    setupMapEvents();
+}
+
+// ===== CHARGEMENT DES IMAGES =====
+function loadExportedImages() {
+    updateStatus('🖼️ Chargement des images...', 'loading');
+    
+    // Couche NDVI
+    layers.ndvi = L.imageOverlay('NDVI.png', CONFIG.imageBounds, {
+        opacity: 0.8,
+        interactive: true
+    });
+    
+    // Couche RGB
+    layers.rgb = L.imageOverlay('RGB.png', CONFIG.imageBounds, {
+        opacity: 0.8,
+        interactive: true
+    });
+    
+    // Couche NDWI
+    layers.ndwi = L.imageOverlay('NDWI.png', CONFIG.imageBounds, {
+        opacity: 0.8,
+        interactive: true
+    });
+    
+    // Ajouter NDVI par défaut
+    layers.ndvi.addTo(map);
+    
+    // Vérifier le chargement
+    checkImagesStatus();
+}
+
+// ===== VÉRIFICATION DU CHARGEMENT =====
+function checkImagesStatus() {
+    setTimeout(() => {
+        let loadedCount = 0;
+        const totalLayers = 3;
+        
+        // Vérifier chaque image
+        Object.values(layers).forEach(layer => {
+            const img = layer.getElement();
+            if (img && img.complete && img.naturalWidth > 0) {
+                loadedCount++;
+            }
+        });
+        
+        if (loadedCount === totalLayers) {
+            updateStatus(`✅ Toutes les images chargées`, 'success');
+        } else {
+            updateStatus(`⚠️ ${loadedCount}/${totalLayers} images chargées`, loadedCount > 0 ? 'success' : 'error');
+        }
+    }, 2000);
+}
+
+// ===== CONTRÔLES DES COUCHES =====
+function toggleLayer(layerName) {
+    const checkbox = document.getElementById(layerName + 'Check');
+    layerVisibility[layerName] = checkbox.checked;
+    
+    if (checkbox.checked) {
+        map.addLayer(layers[layerName]);
+        updateStatus(`✅ ${layerName.toUpperCase()} activé`, 'success');
+    } else {
+        map.removeLayer(layers[layerName]);
+        updateStatus(`👁️ ${layerName.toUpperCase()} masqué`, 'loading');
+    }
+    
+    // Mettre à jour la légende
+    updateLegend();
+}
+
+function updateLayerOpacity(layerName, value) {
+    if (layers[layerName]) {
+        layers[layerName].setOpacity(parseFloat(value));
+        document.getElementById(layerName + 'Opacity').textContent = Math.round(value * 100) + '%';
+    }
+}
+
+function showAllLayers() {
+    document.getElementById('ndviCheck').checked = true;
+    document.getElementById('rgbCheck').checked = true;
+    document.getElementById('ndwiCheck').checked = true;
+    
+    layerVisibility.ndvi = true;
+    layerVisibility.rgb = true;
+    layerVisibility.ndwi = true;
+    
+    map.addLayer(layers.ndvi);
+    map.addLayer(layers.rgb);
+    map.addLayer(layers.ndwi);
+    
+    updateStatus('✅ Toutes les couches activées', 'success');
+    updateLegend();
+}
+
+function hideAllLayers() {
+    document.getElementById('ndviCheck').checked = false;
+    document.getElementById('rgbCheck').checked = false;
+    document.getElementById('ndwiCheck').checked = false;
+    
+    layerVisibility.ndvi = false;
+    layerVisibility.rgb = false;
+    layerVisibility.ndwi = false;
+    
+    map.removeLayer(layers.ndvi);
+    map.removeLayer(layers.rgb);
+    map.removeLayer(layers.ndwi);
+    
+    updateStatus('👁️ Toutes les couches masquées', 'loading');
+    updateLegend();
+}
+
+function updateLegend() {
+    const ndviLegend = document.getElementById('ndviLegend');
+    const ndwiLegend = document.getElementById('ndwiLegend');
+    
+    if (layerVisibility.ndvi) {
+        ndviLegend.style.display = 'block';
+        ndwiLegend.style.display = 'none';
+    } else if (layerVisibility.ndwi) {
+        ndviLegend.style.display = 'none';
+        ndwiLegend.style.display = 'block';
+    } else {
+        ndviLegend.style.display = 'block';
+        ndwiLegend.style.display = 'none';
+    }
+}
+
+// ===== ÉVÉNEMENTS =====
+function setupMapEvents() {
+    // Coordonnées en temps réel
+    map.on('mousemove', function(e) {
+        document.getElementById('coordinates').innerHTML = 
+            `Lat: ${e.latlng.lat.toFixed(4)}, Lng: ${e.latlng.lng.toFixed(4)}`;
+    });
+    
+    // Popup au clic
+    map.on('click', function(e) {
+        let activeLayers = [];
+        if (layerVisibility.ndvi) activeLayers.push('NDVI');
+        if (layerVisibility.rgb) activeLayers.push('RGB');
+        if (layerVisibility.ndwi) activeLayers.push('NDWI');
+        
+        L.popup()
+            .setLatLng(e.latlng)
+            .setContent(`
+                <div style="text-align: center; min-width: 200px;">
+                    <h4 style="margin: 0 0 10px 0; color: #004080;">🌍 Données Géospatiales</h4>
+                    <div style="background: #f8f9fa; padding: 10px; border-radius: 5px;">
+                        <strong>Position:</strong><br>
+                        📍 Lat: ${e.latlng.lat.toFixed(6)}<br>
+                        📍 Lng: ${e.latlng.lng.toFixed(6)}
+                    </div>
+                    <div style="margin-top: 10px; font-size: 12px; color: #666;">
+                        Couches actives: <strong>${activeLayers.join(', ') || 'Aucune'}</strong><br>
+                        Localisation: <strong>Italie</strong>
+                    </div>
+                </div>
+            `)
+            .openOn(map);
+    });
+}
+
+function updateStatus(message, type) {
+    const statusEl = document.getElementById('status');
+    statusEl.textContent = message;
+    statusEl.className = type;
+}
+
+// ===== DÉMARRAGE =====
+document.addEventListener('DOMContentLoaded', function() {
+    initMap();
+});
+
+console.log('🚀 Application de visualisation initialisée');
+</script>
+</body>
+</html>
